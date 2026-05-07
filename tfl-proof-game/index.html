@@ -205,7 +205,7 @@
           <button onclick="resetLevel1()">Reset Level 1</button>
           <button class="secondary" onclick="startOver()">Start Over</button>
         </div>
-        <div id="level1Status" class="status">Matches: 0 / 10</div>
+        <div id="level1Status" class="status">Matches: 0 / 10 | Lives: 3 / 3</div>
         <div id="cardGrid" class="grid"></div>
       </div>
 
@@ -216,7 +216,7 @@
           <button onclick="resetLevel2()">Reset Level 2</button>
           <button class="secondary" onclick="startOver()">Start Over</button>
         </div>
-        <div id="level2Status" class="status">Question 1 / 10</div>
+        <div id="level2Status" class="status">Question 1 / 10 | Lives: 3 / 3</div>
         <div id="proofBox" class="proof-card"></div>
         <label for="answerInput"><strong>Which rule is this soundness proof for?</strong></label>
         <input id="answerInput" placeholder="Example: ∧ Elimination or and elimination" autocomplete="off" />
@@ -283,14 +283,14 @@
       {
         id: "negIntro",
         name: "¬ Introduction",
-        aliases: ["¬ introduction", "¬ intro", "not introduction", "negation introduction", "neg intro"],
+        aliases: ["¬ introduction", "¬ intro", "~ introduction", "~ intro", "~Introduction", "not introduction", "negation introduction", "neg intro"],
         form: "Assume: A\nDerive: ⊥\nInfer: ¬A",
         proof: "Assume that A leads to a contradiction.\nIf A were true, an impossible contradiction would follow.\nSo A cannot be true.\nTherefore ¬A is true."
       },
       {
         id: "negElim",
         name: "¬ Elimination",
-        aliases: ["¬ elimination", "¬ elim", "not elimination", "negation elimination", "neg elim"],
+        aliases: ["¬ elimination", "¬ elim", "~ elimination", "~ elim", "~Elimination", "not elimination", "negation elimination", "neg elim"],
         form: "From: A\nFrom: ¬A\nInfer: ⊥",
         proof: "Assume A is true.\nAssume ¬A is true.\nNegation says A is not true.\nSo A and ¬A cannot both be true; together they produce a contradiction."
       },
@@ -312,6 +312,8 @@
 
     let selectedCards = [];
     let matchedCount = 0;
+    let level1Lives = 3;
+    let level2Lives = 3;
     let level2Index = 0;
     let level2Order = [];
 
@@ -319,6 +321,7 @@
       return text
         .toLowerCase()
         .replaceAll("^", "∧")
+        .replaceAll("~", "¬")
         .replaceAll("&", "∧")
         .replaceAll("v", "∨")
         .replaceAll("->", "→")
@@ -355,12 +358,21 @@
       });
     }
 
+    function updateLevel1Status() {
+      document.getElementById("level1Status").textContent = `Matches: ${matchedCount} / ${rules.length} | Lives: ${level1Lives} / 3`;
+    }
+
+    function updateLevel2Status() {
+      document.getElementById("level2Status").textContent = `Question ${level2Index + 1} / ${level2Order.length} | Lives: ${level2Lives} / 3`;
+    }
+
     function buildLevel1() {
       const grid = document.getElementById("cardGrid");
       grid.innerHTML = "";
       selectedCards = [];
       matchedCount = 0;
-      document.getElementById("level1Status").textContent = `Matches: 0 / ${rules.length}`;
+      level1Lives = 3;
+      updateLevel1Status();
 
       const cards = [];
       rules.forEach(rule => {
@@ -396,7 +408,7 @@
           b.classList.add("matched");
           selectedCards = [];
           matchedCount++;
-          document.getElementById("level1Status").textContent = `Matches: ${matchedCount} / ${rules.length}`;
+          updateLevel1Status();
 
           if (matchedCount === rules.length) {
             document.getElementById("level1Status").textContent = "Level 1 complete! Moving to Level 2...";
@@ -405,6 +417,15 @@
         } else {
           a.classList.add("wrong");
           b.classList.add("wrong");
+          level1Lives--;
+          updateLevel1Status();
+
+          if (level1Lives === 0) {
+            document.getElementById("level1Status").textContent = "No lives left! Resetting Level 1...";
+            setTimeout(resetLevel1, 900);
+            return;
+          }
+
           setTimeout(() => {
             a.classList.remove("selected", "wrong");
             b.classList.remove("selected", "wrong");
@@ -430,6 +451,7 @@
 
     function resetLevel2() {
       level2Index = 0;
+      level2Lives = 3;
       level2Order = shuffle(rules);
       document.getElementById("winBox").classList.add("hidden");
       document.getElementById("answerInput").disabled = false;
@@ -438,7 +460,7 @@
 
     function loadProofQuestion() {
       const current = level2Order[level2Index];
-      document.getElementById("level2Status").textContent = `Question ${level2Index + 1} / ${level2Order.length}`;
+      updateLevel2Status();
       document.getElementById("proofBox").textContent = current.proof;
       document.getElementById("answerInput").value = "";
       document.getElementById("answerInput").focus();
@@ -463,7 +485,15 @@
           setTimeout(loadProofQuestion, 750);
         }
       } else {
-        document.getElementById("feedback").textContent = "Not quite. Check the guide and try another rule name.";
+        level2Lives--;
+        updateLevel2Status();
+
+        if (level2Lives === 0) {
+          document.getElementById("feedback").textContent = "No lives left! Resetting Level 2...";
+          setTimeout(resetLevel2, 1000);
+        } else {
+          document.getElementById("feedback").textContent = `Not quite. Lives left: ${level2Lives} / 3. Check the guide and try another rule name.`;
+        }
       }
     }
 
