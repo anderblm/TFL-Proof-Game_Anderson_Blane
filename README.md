@@ -12,7 +12,7 @@ Download and Run Locally!
 
 Step 1: Download
 Go to the GitHub repository:
-👉 https://github.com/anderblm/TFL-Proof-Game_Anderson_Blane
+https://github.com/anderblm/TFL-Proof-Game_Anderson_Blane
 Click the green Code button
 Click Download ZIP
 Step 2: Extract Files
@@ -24,7 +24,7 @@ Find the file named:
 index.html
 Double-click it
 
-👉 The game will open in your web browser
+The game will open in your web browser
 
 
 IN case this doesnt work!!!!!!
