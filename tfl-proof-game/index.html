@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TFL Proof Rules Game</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --ink: #1f2937;
+      --muted: #64748b;
+      --accent: #4f46e5;
+      --accent-dark: #3730a3;
+      --good: #16a34a;
+      --bad: #dc2626;
+      --gold: #f59e0b;
+      --border: #d8dee9;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top, #eef2ff, var(--bg));
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 28px 16px 16px;
+    }
+
+    h1 { margin: 0 0 8px; font-size: clamp(28px, 4vw, 44px); }
+    h2 { margin-top: 0; }
+    p { line-height: 1.5; }
+
+    .shell {
+      width: min(1180px, 94vw);
+      margin: 0 auto 40px;
+      display: grid;
+      grid-template-columns: 1fr 330px;
+      gap: 20px;
+    }
+
+    .panel, .guide {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 14px 40px rgba(31, 41, 55, 0.08);
+      padding: 20px;
+    }
+
+    .guide {
+      position: sticky;
+      top: 16px;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 14px 0 18px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover { background: var(--accent-dark); transform: translateY(-1px); }
+    button.secondary { background: #e2e8f0; color: var(--ink); }
+    button.secondary:hover { background: #cbd5e1; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    .status {
+      padding: 12px 14px;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 14px;
+      margin-bottom: 18px;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      gap: 12px;
+    }
+
+    .memory-card {
+      min-height: 126px;
+      border-radius: 18px;
+      border: 2px solid #cbd5e1;
+      background: linear-gradient(145deg, #ffffff, #f8fafc);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 12px;
+      font-size: 15px;
+      line-height: 1.35;
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+      transition: transform 0.16s ease, border 0.16s ease, background 0.16s ease;
+      white-space: pre-line;
+    }
+
+    .memory-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .memory-card.selected { border-color: var(--gold); background: #fffbeb; }
+    .memory-card.matched { border-color: var(--good); background: #dcfce7; cursor: default; }
+    .memory-card.wrong { border-color: var(--bad); background: #fee2e2; }
+
+    .level-two {
+      display: none;
+    }
+
+    .proof-card {
+      background: #0f172a;
+      color: #e5e7eb;
+      border-radius: 18px;
+      padding: 18px;
+      margin: 16px 0;
+      font-family: "Courier New", monospace;
+      white-space: pre-wrap;
+      line-height: 1.45;
+      overflow-x: auto;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 14px;
+      border: 2px solid #cbd5e1;
+      font-size: 16px;
+      margin: 8px 0 10px;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+    }
+
+    .answers {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .rule-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    .rule-name { font-weight: 900; color: var(--accent-dark); }
+    .hidden { display: none !important; }
+    .win {
+      background: #ecfdf5;
+      border: 2px solid #86efac;
+      color: #14532d;
+      border-radius: 18px;
+      padding: 20px;
+      margin-top: 16px;
+      font-size: 20px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .shell { grid-template-columns: 1fr; }
+      .guide { position: static; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>TFL Proof Rules Game</h1>
+    <p>Level 1: match each rule name with its form. Level 2: identify the rule from a soundness proof.</p>
+  </header>
+
+  <main class="shell">
+    <section class="panel">
+      <div id="level1" class="level-one">
+        <h2>Level 1: Rule Matching</h2>
+        <p>Click a rule card, then click the matching form card. Match all pairs to unlock Level 2.</p>
+        <div class="controls">
+          <button onclick="resetLevel1()">Reset Level 1</button>
+          <button class="secondary" onclick="startOver()">Start Over</button>
+        </div>
+        <div id="level1Status" class="status">Matches: 0 / 10</div>
+        <div id="cardGrid" class="grid"></div>
+      </div>
+
+      <div id="level2" class="level-two">
+        <h2>Level 2: Soundness Proofs</h2>
+        <p>Read each soundness proof and type the TFL rule it justifies. Use the guide on the right for possible answers.</p>
+        <div class="controls">
+          <button onclick="resetLevel2()">Reset Level 2</button>
+          <button class="secondary" onclick="startOver()">Start Over</button>
+        </div>
+        <div id="level2Status" class="status">Question 1 / 10</div>
+        <div id="proofBox" class="proof-card"></div>
+        <label for="answerInput"><strong>Which rule is this soundness proof for?</strong></label>
+        <input id="answerInput" placeholder="Example: ∧ Elimination or and elimination" autocomplete="off" />
+        <div class="controls">
+          <button onclick="checkAnswer()">Submit Answer</button>
+          <button class="secondary" onclick="showHint()">Show Hint</button>
+        </div>
+        <div id="feedback" class="status">Type your answer and submit.</div>
+        <div id="winBox" class="win hidden">Game over — you win! 🎉</div>
+      </div>
+    </section>
+
+    <aside class="guide">
+      <h2>Rule Guide</h2>
+      <p>These are the possible answers. The game accepts symbol names and word names, like <strong>∧ Intro</strong> or <strong>and introduction</strong>.</p>
+      <div id="ruleGuide" class="answers"></div>
+    </aside>
+  </main>
+
+  <script>
+    const rules = [
+      {
+        id: "andIntro",
+        name: "∧ Introduction",
+        aliases: ["∧ introduction", "∧ intro", "and introduction", "and intro", "conjunction introduction"],
+        form: "From: A\nFrom: B\nInfer: A ∧ B",
+        proof: "Assume A is true.\nAssume B is true.\nA conjunction A ∧ B is true exactly when both conjuncts are true.\nSince A is true and B is true, A ∧ B must be true."
+      },
+      {
+        id: "andElim",
+        name: "∧ Elimination",
+        aliases: ["∧ elimination", "∧ elim", "and elimination", "and elim", "conjunction elimination"],
+        form: "From: A ∧ B\nInfer: A\nInfer: B",
+        proof: "Assume A ∧ B is true.\nA conjunction is true only when both parts are true.\nTherefore A is true, and B is also true."
+      },
+      {
+        id: "orIntro",
+        name: "∨ Introduction",
+        aliases: ["∨ introduction", "∨ intro", "or introduction", "or intro", "disjunction introduction"],
+        form: "From: A\nInfer: A ∨ B\nInfer: B ∨ A",
+        proof: "Assume A is true.\nA disjunction A ∨ B is true when at least one disjunct is true.\nSince A is true, A ∨ B is true no matter whether B is true or false."
+      },
+      {
+        id: "orElim",
+        name: "∨ Elimination",
+        aliases: ["∨ elimination", "∨ elim", "or elimination", "or elim", "disjunction elimination", "proof by cases"],
+        form: "From: A ∨ B\nFrom: A ⊢ C\nFrom: B ⊢ C\nInfer: C",
+        proof: "Assume A ∨ B is true.\nThat means at least one of A or B is true.\nIf A is true, C follows.\nIf B is true, C follows.\nSo in every possible case allowed by A ∨ B, C is true."
+      },
+      {
+        id: "conditionalIntro",
+        name: "→ Introduction",
+        aliases: ["→ introduction", "→ intro", "conditional introduction", "conditional intro", "arrow intro", "implication introduction"],
+        form: "Assume: A\nDerive: B\nInfer: A → B",
+        proof: "Assume that whenever A is true, B can be derived.\nA conditional A → B is false only when A is true and B is false.\nBut under the assumption A, B follows.\nSo there is no case where A is true and B is false. Therefore A → B is true."
+      },
+      {
+        id: "conditionalElim",
+        name: "→ Elimination",
+        aliases: ["→ elimination", "→ elim", "conditional elimination", "conditional elim", "modus ponens", "arrow elimination", "implication elimination"],
+        form: "From: A → B\nFrom: A\nInfer: B",
+        proof: "Assume A → B is true.\nAssume A is true.\nA true conditional with a true antecedent cannot have a false consequent.\nTherefore B must be true."
+      },
+      {
+        id: "negIntro",
+        name: "¬ Introduction",
+        aliases: ["¬ introduction", "¬ intro", "not introduction", "negation introduction", "neg intro"],
+        form: "Assume: A\nDerive: ⊥\nInfer: ¬A",
+        proof: "Assume that A leads to a contradiction.\nIf A were true, an impossible contradiction would follow.\nSo A cannot be true.\nTherefore ¬A is true."
+      },
+      {
+        id: "negElim",
+        name: "¬ Elimination",
+        aliases: ["¬ elimination", "¬ elim", "not elimination", "negation elimination", "neg elim"],
+        form: "From: A\nFrom: ¬A\nInfer: ⊥",
+        proof: "Assume A is true.\nAssume ¬A is true.\nNegation says A is not true.\nSo A and ¬A cannot both be true; together they produce a contradiction."
+      },
+      {
+        id: "biconditionalIntro",
+        name: "↔ Introduction",
+        aliases: ["↔ introduction", "↔ intro", "biconditional introduction", "biconditional intro", "iff introduction"],
+        form: "Derive: A → B\nDerive: B → A\nInfer: A ↔ B",
+        proof: "Assume A → B is true.\nAssume B → A is true.\nA biconditional A ↔ B is true when A and B have the same truth value.\nThe two conditionals show that each one guarantees the other.\nTherefore A ↔ B is true."
+      },
+      {
+        id: "biconditionalElim",
+        name: "↔ Elimination",
+        aliases: ["↔ elimination", "↔ elim", "biconditional elimination", "biconditional elim", "iff elimination"],
+        form: "From: A ↔ B\nInfer: A → B\nInfer: B → A",
+        proof: "Assume A ↔ B is true.\nThat means A and B have the same truth value.\nSo if A is true, B must be true; and if B is true, A must be true.\nTherefore both A → B and B → A follow."
+      }
+    ];
+
+    let selectedCards = [];
+    let matchedCount = 0;
+    let level2Index = 0;
+    let level2Order = [];
+
+    function normalize(text) {
+      return text
+        .toLowerCase()
+        .replaceAll("^", "∧")
+        .replaceAll("&", "∧")
+        .replaceAll("v", "∨")
+        .replaceAll("->", "→")
+        .replaceAll("<->", "↔")
+        .replace(/[.,!?:;]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function shuffle(array) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function buildGuide(showForms = false) {
+      const guide = document.getElementById("ruleGuide");
+      guide.innerHTML = "";
+
+      rules.forEach(rule => {
+        const item = document.createElement("div");
+        item.className = "rule-item";
+
+        if (showForms) {
+          item.innerHTML = `<div class="rule-name">${rule.name}</div><div>${rule.form.replaceAll("\n", "<br>")}</div>`;
+        } else {
+          item.innerHTML = `<div class="rule-name">${rule.name}</div>`;
+        }
+
+        guide.appendChild(item);
+      });
+    }
+
+    function buildLevel1() {
+      const grid = document.getElementById("cardGrid");
+      grid.innerHTML = "";
+      selectedCards = [];
+      matchedCount = 0;
+      document.getElementById("level1Status").textContent = `Matches: 0 / ${rules.length}`;
+
+      const cards = [];
+      rules.forEach(rule => {
+        cards.push({ ruleId: rule.id, type: "name", text: rule.name });
+        cards.push({ ruleId: rule.id, type: "form", text: rule.form });
+      });
+
+      shuffle(cards).forEach((card, index) => {
+        const el = document.createElement("div");
+        el.className = "memory-card";
+        el.textContent = card.text;
+        el.dataset.ruleId = card.ruleId;
+        el.dataset.type = card.type;
+        el.dataset.index = index;
+        el.addEventListener("click", () => selectCard(el));
+        grid.appendChild(el);
+      });
+    }
+
+    function selectCard(card) {
+      if (card.classList.contains("matched") || card.classList.contains("selected") || selectedCards.length === 2) return;
+      card.classList.add("selected");
+      selectedCards.push(card);
+
+      if (selectedCards.length === 2) {
+        const [a, b] = selectedCards;
+        const isMatch = a.dataset.ruleId === b.dataset.ruleId && a.dataset.type !== b.dataset.type;
+
+        if (isMatch) {
+          a.classList.remove("selected");
+          b.classList.remove("selected");
+          a.classList.add("matched");
+          b.classList.add("matched");
+          selectedCards = [];
+          matchedCount++;
+          document.getElementById("level1Status").textContent = `Matches: ${matchedCount} / ${rules.length}`;
+
+          if (matchedCount === rules.length) {
+            document.getElementById("level1Status").textContent = "Level 1 complete! Moving to Level 2...";
+            setTimeout(startLevel2, 900);
+          }
+        } else {
+          a.classList.add("wrong");
+          b.classList.add("wrong");
+          setTimeout(() => {
+            a.classList.remove("selected", "wrong");
+            b.classList.remove("selected", "wrong");
+            selectedCards = [];
+          }, 800);
+        }
+      }
+    }
+
+    function startLevel2() {
+      document.getElementById("level1").style.display = "none";
+      document.getElementById("level2").style.display = "block";
+      buildGuide(true);
+      resetLevel2();
+    }
+
+    function resetLevel1() {
+      document.getElementById("level1").style.display = "block";
+      document.getElementById("level2").style.display = "none";
+      buildGuide(false);
+      buildLevel1();
+    }
+
+    function resetLevel2() {
+      level2Index = 0;
+      level2Order = shuffle(rules);
+      document.getElementById("winBox").classList.add("hidden");
+      document.getElementById("answerInput").disabled = false;
+      loadProofQuestion();
+    }
+
+    function loadProofQuestion() {
+      const current = level2Order[level2Index];
+      document.getElementById("level2Status").textContent = `Question ${level2Index + 1} / ${level2Order.length}`;
+      document.getElementById("proofBox").textContent = current.proof;
+      document.getElementById("answerInput").value = "";
+      document.getElementById("answerInput").focus();
+      document.getElementById("feedback").textContent = "Type your answer and submit.";
+    }
+
+    function checkAnswer() {
+      if (level2Index >= level2Order.length) return;
+      const current = level2Order[level2Index];
+      const guess = normalize(document.getElementById("answerInput").value);
+      const accepted = current.aliases.map(normalize);
+
+      if (accepted.includes(guess)) {
+        document.getElementById("feedback").textContent = `Correct: ${current.name}`;
+        level2Index++;
+        if (level2Index === level2Order.length) {
+          document.getElementById("level2Status").textContent = "Level 2 complete!";
+          document.getElementById("proofBox").textContent = "All soundness proofs identified correctly.";
+          document.getElementById("answerInput").disabled = true;
+          document.getElementById("winBox").classList.remove("hidden");
+        } else {
+          setTimeout(loadProofQuestion, 750);
+        }
+      } else {
+        document.getElementById("feedback").textContent = "Not quite. Check the guide and try another rule name.";
+      }
+    }
+
+    function showHint() {
+      const current = level2Order[level2Index];
+      const firstLetter = current.name[0];
+      document.getElementById("feedback").textContent = `Hint: the rule starts with ${firstLetter}.`;
+    }
+
+    function startOver() {
+      resetLevel1();
+    }
+
+    document.getElementById("answerInput").addEventListener("keydown", event => {
+      if (event.key === "Enter") checkAnswer();
+    });
+
+    buildGuide();
+    buildLevel1();
+  </script>
+</body>
+</html>
