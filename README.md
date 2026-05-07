@@ -25,3 +25,16 @@ index.html
 Double-click it
 
 👉 The game will open in your web browser
+
+
+IN case this doesnt work!!!!!!
+
+Open Visual Studio Code or Cursor or etc 
+
+Step1: clone the repository (if you know how)
+
+(if you dont) just download zip file and then open it with Visual Studio code or whatever IDE you choose to use 
+
+STep2: then download Live Server as an extension or whatever extension you want or have for local server 
+
+Step3: then just right click in index.html file and then run with live server or what extension you choose and then it should open the game inside your browser of choice!
