@@ -124,9 +124,7 @@
     .memory-card.matched { border-color: var(--good); background: #dcfce7; cursor: default; }
     .memory-card.wrong { border-color: var(--bad); background: #fee2e2; }
 
-    .level-two {
-      display: none;
-    }
+    .level-two { display: none; }
 
     .proof-card {
       background: #0f172a;
@@ -172,6 +170,7 @@
 
     .rule-name { font-weight: 900; color: var(--accent-dark); }
     .hidden { display: none !important; }
+
     .win {
       background: #ecfdf5;
       border: 2px solid #86efac;
@@ -231,12 +230,14 @@
 
     <aside class="guide">
       <h2>Rule Guide</h2>
-      <p>These are the possible answers. The game accepts symbol names and word names, like <strong>∧ Intro</strong> or <strong>and introduction</strong>.</p>
+      <p>These are the possible answers. The game accepts symbol names and word names, like <strong>∧ Intro</strong>, <strong>and introduction</strong>, or <strong>~ Introduction</strong>.</p>
       <div id="ruleGuide" class="answers"></div>
     </aside>
   </main>
 
   <script>
+    const TRUTH_PRESERVATION_NOTE = "Therefore, in every case where the premises are true, the conclusion is also true. That is the rule-soundness idea: truth-preservation, or shininess-preservation.";
+
     const rules = [
       {
         id: "andIntro",
@@ -283,14 +284,14 @@
       {
         id: "negIntro",
         name: "¬ Introduction",
-        aliases: ["¬ introduction", "¬ intro", "~ introduction", "~ intro", "~Introduction", "not introduction", "negation introduction", "neg intro"],
+        aliases: ["¬ introduction", "¬ intro", "~ introduction", "~ intro", "~introduction", "not introduction", "negation introduction", "neg intro"],
         form: "Assume: A\nDerive: ⊥\nInfer: ¬A",
         proof: "Assume that A leads to a contradiction.\nIf A were true, an impossible contradiction would follow.\nSo A cannot be true.\nTherefore ¬A is true."
       },
       {
         id: "negElim",
         name: "¬ Elimination",
-        aliases: ["¬ elimination", "¬ elim", "~ elimination", "~ elim", "~Elimination", "not elimination", "negation elimination", "neg elim"],
+        aliases: ["¬ elimination", "¬ elim", "~ elimination", "~ elim", "~elimination", "not elimination", "negation elimination", "neg elim"],
         form: "From: A\nFrom: ¬A\nInfer: ⊥",
         proof: "Assume A is true.\nAssume ¬A is true.\nNegation says A is not true.\nSo A and ¬A cannot both be true; together they produce a contradiction."
       },
@@ -298,15 +299,15 @@
         id: "biconditionalIntro",
         name: "↔ Introduction",
         aliases: ["↔ introduction", "↔ intro", "biconditional introduction", "biconditional intro", "iff introduction"],
-        form: "Derive: A → B\nDerive: B → A\nInfer: A ↔ B",
-        proof: "Assume A → B is true.\nAssume B → A is true.\nA biconditional A ↔ B is true when A and B have the same truth value.\nThe two conditionals show that each one guarantees the other.\nTherefore A ↔ B is true."
+        form: "From: A ⊢ B\nFrom: B ⊢ A\nInfer: A ↔ B",
+        proof: "Assume that from A we can derive B, and from B we can derive A.\nThis means A and B must always have the same truth value.\nA biconditional is true exactly when both sides match in truth value.\nSo A ↔ B is true."
       },
       {
         id: "biconditionalElim",
         name: "↔ Elimination",
         aliases: ["↔ elimination", "↔ elim", "biconditional elimination", "biconditional elim", "iff elimination"],
-        form: "From: A ↔ B\nInfer: A → B\nInfer: B → A",
-        proof: "Assume A ↔ B is true.\nThat means A and B have the same truth value.\nSo if A is true, B must be true; and if B is true, A must be true.\nTherefore both A → B and B → A follow."
+        form: "From: A ↔ B\nFrom: A\nInfer: B\n\nFrom: A ↔ B\nFrom: B\nInfer: A",
+        proof: "Assume A ↔ B is true.\nThat means A and B always share the same truth value.\nIf A is true, B must be true.\nIf B is true, A must be true.\nSo each direction follows from the biconditional."
       }
     ];
 
@@ -340,6 +341,19 @@
       return copy;
     }
 
+    function escapeHtml(value) {
+      return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderLinesAsHtml(value) {
+      return escapeHtml(value).replaceAll("\n", "<br>");
+    }
+
     function buildGuide(showForms = false) {
       const guide = document.getElementById("ruleGuide");
       guide.innerHTML = "";
@@ -349,9 +363,9 @@
         item.className = "rule-item";
 
         if (showForms) {
-          item.innerHTML = `<div class="rule-name">${rule.name}</div><div>${rule.form.replaceAll("\n", "<br>")}</div>`;
+          item.innerHTML = `<div class="rule-name">${escapeHtml(rule.name)}</div><div>${renderLinesAsHtml(rule.form)}</div>`;
         } else {
-          item.innerHTML = `<div class="rule-name">${rule.name}</div>`;
+          item.innerHTML = `<div class="rule-name">${escapeHtml(rule.name)}</div>`;
         }
 
         guide.appendChild(item);
@@ -363,7 +377,9 @@
     }
 
     function updateLevel2Status() {
-      document.getElementById("level2Status").textContent = `Question ${level2Index + 1} / ${level2Order.length} | Lives: ${level2Lives} / 3`;
+      const safeQuestionNumber = Math.min(level2Index + 1, level2Order.length || rules.length);
+      const total = level2Order.length || rules.length;
+      document.getElementById("level2Status").textContent = `Question ${safeQuestionNumber} / ${total} | Lives: ${level2Lives} / 3`;
     }
 
     function buildLevel1() {
@@ -422,6 +438,7 @@
 
           if (level1Lives === 0) {
             document.getElementById("level1Status").textContent = "No lives left! Resetting Level 1...";
+            selectedCards = [];
             setTimeout(resetLevel1, 900);
             return;
           }
@@ -460,8 +477,9 @@
 
     function loadProofQuestion() {
       const current = level2Order[level2Index];
+      if (!current) return;
       updateLevel2Status();
-      document.getElementById("proofBox").textContent = current.proof;
+      document.getElementById("proofBox").innerHTML = renderLinesAsHtml(`${current.proof}\n\n${TRUTH_PRESERVATION_NOTE}`);
       document.getElementById("answerInput").value = "";
       document.getElementById("answerInput").focus();
       document.getElementById("feedback").textContent = "Type your answer and submit.";
@@ -499,19 +517,30 @@
 
     function showHint() {
       const current = level2Order[level2Index];
-      const firstLetter = current.name[0];
-      document.getElementById("feedback").textContent = `Hint: the rule starts with ${firstLetter}.`;
+      if (!current) return;
+      document.getElementById("feedback").textContent = `Hint: the rule starts with ${current.name[0]}.`;
     }
 
     function startOver() {
       resetLevel1();
     }
 
+    function runTests() {
+      console.assert(rules.length === 10, "Expected exactly 10 rules.");
+      console.assert(rules.every(rule => typeof rule.form === "string" && typeof rule.proof === "string"), "Every rule needs string form and proof values.");
+      console.assert(normalize("~ Introduction") === normalize("¬ Introduction"), "~ Introduction should normalize to ¬ Introduction.");
+      console.assert(normalize("~Elimination") === normalize("¬ elimination"), "~Elimination should normalize to ¬ Elimination.");
+      console.assert(rules.find(rule => rule.id === "biconditionalIntro").form.includes("A ⊢ B"), "Biconditional intro should use subproof form A ⊢ B.");
+      console.assert(renderLinesAsHtml("Line 1\nLine 2").includes("<br>"), "Line renderer should convert newlines to <br>.");
+      console.log("TFL game tests completed.");
+    }
+
     document.getElementById("answerInput").addEventListener("keydown", event => {
       if (event.key === "Enter") checkAnswer();
     });
 
-    buildGuide();
+    runTests();
+    buildGuide(false);
     buildLevel1();
   </script>
 </body>
